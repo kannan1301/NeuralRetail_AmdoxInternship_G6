@@ -264,12 +264,27 @@ if page == PAGE_LABELS[0]:
     with col3:
         st.subheader("\U0001f6d2 Orders vs Revenue")
         sc = dc.dropna(subset=["Orders", "Revenue"])
-        fig3 = px.scatter(
-            sc, x="Orders", y="Revenue",
-            color="Revenue", color_continuous_scale=HEAT,
-            opacity=0.7, trendline="ols",
-            labels={"Orders": "Daily Orders", "Revenue": "Revenue (\u00a3)"})
-        fig3.update_layout(**PLOT_LAY, coloraxis_showscale=False)
+        # Manual trendline via numpy polyfit (no statsmodels dependency)
+        fig3 = go.Figure()
+        fig3.add_trace(go.Scatter(
+            x=sc["Orders"], y=sc["Revenue"],
+            mode="markers",
+            marker=dict(color=sc["Revenue"], colorscale=HEAT,
+                        opacity=0.7, showscale=False),
+            name="Daily",
+            hovertemplate="Orders: %{x}<br>Revenue: \u00a3%{y:,.0f}<extra></extra>"))
+        if len(sc) > 1:
+            _x = sc["Orders"].to_numpy(dtype=float)
+            _y = sc["Revenue"].to_numpy(dtype=float)
+            _m, _b = np.polyfit(_x, _y, 1)
+            _xr = np.linspace(_x.min(), _x.max(), 100)
+            fig3.add_trace(go.Scatter(
+                x=_xr, y=_m * _xr + _b,
+                mode="lines", line=dict(color="#FBBA13", width=2, dash="dash"),
+                name="Trend"))
+        fig3.update_layout(**PLOT_LAY,
+                           xaxis_title="Daily Orders",
+                           yaxis_title="Revenue (\u00a3)")
         st.plotly_chart(fig3, use_container_width=True)
 
     with col4:
